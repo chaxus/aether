@@ -1,12 +1,12 @@
-# RSC 项目实现分析
+# Aether
 
 > **注意**: AI SDK RSC 的开发目前暂停。更多信息请参阅 [从 AI SDK RSC 迁移](https://sdk.vercel.ai/docs/ai-sdk-rsc/migrating-to-ui#background)。
 
-这是一个基于 **Next.js 14** 和 **Vercel AI SDK** 的 React Server Components (RSC) 项目，展示了如何通过流式传输的方式将 AI 生成的 React 组件实时渲染到客户端。
+**Aether** 是一个基于 **Next.js** 和 **Vercel AI SDK** 构建的 React Server Components (RSC) 项目，展示了如何通过流式传输的方式将 AI 生成的 React 组件实时渲染到客户端。正如以太连接天地，Aether 无缝地连接 AI 智能与动态用户界面。
 
 ## 项目概述
 
-本项目演示了如何使用 [Vercel AI SDK](https://sdk.vercel.ai/docs) 与 [Next.js](https://nextjs.org/) 的 `streamUI` 函数，通过流式传输 React Server Components 到客户端来创建生成式用户界面。
+Aether 演示了如何使用 [Vercel AI SDK](https://sdk.vercel.ai/docs) 与 [Next.js](https://nextjs.org/) 的 `streamUI` 函数，通过流式传输 React Server Components 到客户端来创建生成式用户界面。项目展示了实时 AI 驱动的 UI 生成，组件从服务器到客户端流畅传输。
 
 ## 核心技术栈
 
@@ -286,14 +286,14 @@ RSC 流式传输回客户端
 
 ## 总结
 
-这个项目展示了如何将 AI 与 React Server Components 结合，实现：
+Aether 展示了如何将 AI 与 React Server Components 结合，实现：
 
-- **流式传输** - 实时更新 UI
+- **流式传输** - 流畅的实时 UI 更新
 - **动态生成** - LLM 决定渲染什么组件
 - **类型安全** - 完整的 TypeScript 支持
 - **服务器优先** - 利用 RSC 的优势
 
-这是 Vercel AI SDK RSC 功能的典型应用场景，特别适合需要根据 AI 响应动态生成复杂 UI 的应用。
+这是 Vercel AI SDK RSC 功能的典型应用场景，特别适合需要根据 AI 响应动态生成复杂 UI 的应用。Aether 作为 AI 智能与用户体验之间的桥梁，实现了流畅的实时交互。
 
 ## 了解更多
 
