@@ -1,6 +1,6 @@
 'use client';
 
-import { Hub } from '@/src/app/(preview)/actions';
+import { Hub } from '@/app/(preview)/actions';
 import { GuageIcon, LightningIcon, LockIcon } from './icons';
 import { motion } from 'framer-motion';
 import { scaleLinear } from 'd3-scale';
@@ -26,7 +26,7 @@ export const HubView = ({ hub }: { hub: Hub }) => {
       </motion.div>
 
       <motion.div
-        className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-md flex flex-row gap-3 items-center flex-shrink-0"
+        className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-md flex flex-row gap-3 items-center shrink-0"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}

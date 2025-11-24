@@ -1,6 +1,6 @@
 import { Message, TextStreamMessage } from '@/components/message';
 import { createOpenAI } from '@ai-sdk/openai';
-import { CoreMessage, generateId } from 'ai';
+import { ModelMessage, generateId } from 'ai';
 import { createAI, createStreamableValue, getMutableAIState, streamUI } from '@ai-sdk/rsc';
 import { ReactNode } from 'react';
 import { z } from 'zod';
@@ -34,7 +34,7 @@ const sendMessage = async (message: string) => {
   const messages = getMutableAIState<typeof AI>('messages');
 
   // Clean up any empty assistant messages before adding new user message
-  const currentMessages = messages.get() as CoreMessage[];
+  const currentMessages = messages.get() as ModelMessage[];
   const cleanMessages = currentMessages.filter(
     (msg) =>
       !(msg.role === 'assistant' && (!msg.content || (typeof msg.content === 'string' && msg.content.trim() === ''))),
@@ -67,12 +67,12 @@ const sendMessage = async (message: string) => {
         - you are a friendly home automation assistant
         - reply in lower case
       `,
-      messages: messages.get() as CoreMessage[],
+      messages: messages.get() as ModelMessage[],
       text: async function* ({ content, delta: _delta, done }) {
         if (done) {
           // Only update messages if we have actual content
           if (content && content.trim()) {
-            messages.done([...(messages.get() as CoreMessage[]), { role: 'assistant', content }]);
+            messages.done([...(messages.get() as ModelMessage[]), { role: 'assistant', content }]);
           }
           contentStream.done();
         } else {
@@ -156,7 +156,7 @@ export type UIState = Array<ReactNode>;
 
 export type AIState = {
   chatId: string;
-  messages: Array<CoreMessage>;
+  messages: Array<ModelMessage>;
 };
 
 export const AI = createAI<AIState, UIState>({
