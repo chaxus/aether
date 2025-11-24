@@ -1,8 +1,5 @@
 @import 'tailwindcss';
 
-@source './app/**/*.{js,ts,jsx,tsx,mdx}';
-@source './components/**/*.{js,ts,jsx,tsx,mdx}';
-
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;

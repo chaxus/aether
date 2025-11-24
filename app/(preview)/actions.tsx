@@ -68,7 +68,7 @@ const sendMessage = async (message: string) => {
         - reply in lower case
       `,
       messages: messages.get() as CoreMessage[],
-      text: async function* ({ content, delta, done }) {
+      text: async function* ({ content, delta: _delta, done }) {
         if (done) {
           // Only update messages if we have actual content
           if (content && content.trim()) {
@@ -85,7 +85,7 @@ const sendMessage = async (message: string) => {
         viewCameras: {
           description: 'view current active cameras',
           inputSchema: z.object({}),
-          generate: async function* (input, { toolName, toolCallId }) {
+          generate: async function* (_input, { toolName: _toolName, toolCallId: _toolCallId }) {
             return <Message role="assistant" content={<CameraView />} />;
           },
         },
@@ -93,7 +93,7 @@ const sendMessage = async (message: string) => {
           description:
             'view the hub that contains current quick summary and actions for temperature, lights, and locks',
           inputSchema: z.object({}),
-          generate: async function* (input, { toolName, toolCallId }) {
+          generate: async function* (_input, { toolName: _toolName, toolCallId: _toolCallId }) {
             return <Message role="assistant" content={<HubView hub={hub} />} />;
           },
         },
@@ -109,7 +109,7 @@ const sendMessage = async (message: string) => {
               locks: z.array(z.object({ name: z.string(), isLocked: z.boolean() })),
             }),
           }),
-          generate: async function* ({ hub: newHub }, { toolName, toolCallId }) {
+          generate: async function* ({ hub: newHub }, { toolName: _toolName, toolCallId: _toolCallId }) {
             hub = newHub;
             return <Message role="assistant" content={<HubView hub={hub} />} />;
           },
@@ -119,7 +119,7 @@ const sendMessage = async (message: string) => {
           inputSchema: z.object({
             type: z.enum(['electricity', 'water', 'gas']),
           }),
-          generate: async function* ({ type }, { toolName, toolCallId }) {
+          generate: async function* ({ type }, { toolName: _toolName, toolCallId: _toolCallId }) {
             return <Message role="assistant" content={<UsageView type={type} />} />;
           },
         },
@@ -168,7 +168,7 @@ export const AI = createAI<AIState, UIState>({
   actions: {
     sendMessage,
   },
-  onSetAIState: async ({ key, state, done }) => {
+  onSetAIState: async ({ key: _key, state: _state, done }) => {
     'use server';
 
     if (done) {
