@@ -1,83 +1,79 @@
-# RSC 项目实现分析
+# RSC Project Implementation Analysis
 
-> **注意**: AI SDK RSC 的开发目前暂停。更多信息请参阅 [从 AI SDK RSC 迁移](https://sdk.vercel.ai/docs/ai-sdk-rsc/migrating-to-ui#background)。
+> **Note**: Development of AI SDK RSC is currently paused. For more information, see [Migrating from AI SDK RSC](https://sdk.vercel.ai/docs/ai-sdk-rsc/migrating-to-ui#background).
 
-这是一个基于 **Next.js 14** 和 **Vercel AI SDK** 的 React Server Components (RSC) 项目，展示了如何通过流式传输的方式将 AI 生成的 React 组件实时渲染到客户端。
+This is a React Server Components (RSC) project based on **Next.js 14** and **Vercel AI SDK**, demonstrating how to stream AI-generated React components to the client in real-time.
 
-## 项目概述
+## Project Overview
 
-本项目演示了如何使用 [Vercel AI SDK](https://sdk.vercel.ai/docs) 与 [Next.js](https://nextjs.org/) 的 `streamUI` 函数，通过流式传输 React Server Components 到客户端来创建生成式用户界面。
+This example demonstrates how to use the [Vercel AI SDK](https://sdk.vercel.ai/docs) with [Next.js](https://nextjs.org/) and the `streamUI` function to create generative user interfaces by streaming React Server Components to the client.
 
-## 核心技术栈
+## Tech Stack
 
-- **Next.js 14.2.5** - 使用 App Router
-- **Vercel AI SDK 3.3.20** - 提供 RSC 支持
-- **React 18** - 支持 Server Components
-- **OpenAI SDK** - 与 LLM 交互
-- **TypeScript** - 类型安全
-- **Zod** - 参数验证
+- **Next.js 14.2.5** - Using App Router
+- **Vercel AI SDK 3.3.20** - RSC support
+- **React 18** - Server Components support
+- **OpenAI SDK** - LLM interaction
+- **TypeScript** - Type safety
+- **Zod** - Parameter validation
 
-## 快速开始
+## Quick Start
 
-### 部署
+### Deploy
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fai-sdk-preview-rsc-genui&env=OPENAI_API_KEY&envDescription=API%20keys%20needed%20for%20application&envLink=platform.openai.com)
 
-### 本地运行
+### Run Locally
 
-使用 [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) 创建项目：
+Run [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) with [npm](https://docs.npmjs.com/cli/init), [Yarn](https://yarnpkg.com/lang/en/docs/cli/create/), or [pnpm](https://pnpm.io) to bootstrap the example:
 
 ```bash
 npx create-next-app --example https://github.com/vercel-labs/ai-sdk-preview-rsc-genui ai-sdk-preview-rsc-genui-example
 ```
 
-或使用 Yarn：
-
 ```bash
 yarn create next-app --example https://github.com/vercel-labs/ai-sdk-preview-rsc-genui ai-sdk-preview-rsc-genui-example
 ```
-
-或使用 pnpm：
 
 ```bash
 pnpm create next-app --example https://github.com/vercel-labs/ai-sdk-preview-rsc-genui ai-sdk-preview-rsc-genui-example
 ```
 
-运行本地开发环境：
+To run the example locally you need to:
 
-1. 注册 AI 服务提供商账户（如 OpenAI、Anthropic）
-2. 获取 API 密钥
-3. 在 `.env` 文件中设置所需的环境变量（参考 `.env.example`）
-4. 运行 `npm install` 安装依赖
-5. 运行 `npm run dev` 启动开发服务器
+1. Sign up for accounts with the AI providers you want to use (e.g., OpenAI, Anthropic).
+2. Obtain API keys for each provider.
+3. Set the required environment variables as shown in the `.env.example` file, but in a new file called `.env`.
+4. `npm install` to install the required dependencies.
+5. `npm run dev` to launch the development server.
 
-## 核心实现原理
+## Core Implementation
 
-### 1. 架构设计
+### 1. Architecture
 
 ```
-客户端 (Client Component)
+Client Component
     ↓
-调用 Server Action (sendMessage)
+Call Server Action (sendMessage)
     ↓
-Server Action 使用 streamUI
+Server Action uses streamUI
     ↓
-LLM 决定调用工具 (Tools)
+LLM decides to call Tools
     ↓
-工具返回 React Server Component
+Tools return React Server Component
     ↓
-组件流式传输回客户端
+Components streamed to client
     ↓
-客户端实时渲染
+Client renders in real-time
 ```
 
-### 2. 关键文件分析
+### 2. Key Files
 
-#### `app/(preview)/actions.tsx` - 核心实现
+#### `app/(preview)/actions.tsx` - Core Implementation
 
-这是整个项目的核心，实现了 RSC 的流式传输机制：
+This is the core of the entire project, implementing the RSC streaming mechanism:
 
-**a) AI 上下文创建**
+**a) AI Context Creation**
 
 ```typescript
 export const AI = createAI<AIState, UIState>({
@@ -85,7 +81,7 @@ export const AI = createAI<AIState, UIState>({
   initialUIState: [],
   actions: { sendMessage },
   onSetAIState: async ({ state, done }) => {
-    /* 持久化状态 */
+    /* persist state */
   },
 });
 ```
@@ -94,21 +90,21 @@ export const AI = createAI<AIState, UIState>({
 
 ```typescript
 const sendMessage = async (message: string) => {
-  "use server";  // Next.js Server Action 标记
+  "use server";  // Next.js Server Action marker
 
   const messages = getMutableAIState<typeof AI>("messages");
   messages.update([...cleanMessages, { role: "user", content: message }]);
 
-  // 创建流式文本值
+  // Create streamable text value
   const contentStream = createStreamableValue("");
   const textComponent = <TextStreamMessage content={contentStream.value} />;
 
-  // 使用 streamUI 流式传输 UI
+  // Use streamUI to stream UI
   const { value: stream } = await streamUI({
     model: customOpenAI("gpt-4o"),
     messages: messages.get(),
     text: async function* ({ content, done }) {
-      // 流式更新文本内容
+      // Stream text content
       if (done) {
         contentStream.done();
       } else {
@@ -116,16 +112,16 @@ const sendMessage = async (message: string) => {
       }
       return textComponent;
     },
-    tools: { /* 工具定义 */ }
+    tools: { /* tool definitions */ }
   });
 
   return stream;
 };
 ```
 
-**c) Tools 定义 - 返回 RSC**
+**c) Tools Definition - Return RSC**
 
-每个工具都是一个生成器函数，返回 React Server Component：
+Each tool is a generator function that returns a React Server Component:
 
 ```typescript
 tools: {
@@ -133,176 +129,176 @@ tools: {
     description: "view current active cameras",
     parameters: z.object({}),
     generate: async function* ({}) {
-      // 更新消息历史
+      // Update message history
       messages.done([...messages, toolCall, toolResult]);
 
-      // 返回 React Server Component
+      // Return React Server Component
       return <Message role="assistant" content={<CameraView />} />;
     },
   },
-  // ... 其他工具
+  // ... other tools
 }
 ```
 
-#### `app/(preview)/layout.tsx` - AI 上下文提供者
+#### `app/(preview)/layout.tsx` - AI Context Provider
 
 ```typescript
 export default function RootLayout({ children }) {
   return (
     <html>
       <body>
-        <AI>{children}</AI>  {/* 提供 AI 上下文 */}
+        <AI>{children}</AI>  {/* Provide AI context */}
       </body>
     </html>
   );
 }
 ```
 
-#### `app/(preview)/page.tsx` - 客户端组件
+#### `app/(preview)/page.tsx` - Client Component
 
 ```typescript
 "use client";
 
 export default function Home() {
-  const { sendMessage } = useActions();  // 从 AI 上下文获取 actions
+  const { sendMessage } = useActions();  // Get actions from AI context
 
   const [messages, setMessages] = useState<Array<ReactNode>>([]);
 
-  // 调用 Server Action
+  // Call Server Action
   const response: ReactNode = await sendMessage(input);
   setMessages((messages) => [...messages, response]);
 
   return (
     <div>
-      {messages.map((message) => message)}  {/* 渲染流式传输的组件 */}
+      {messages.map((message) => message)}  {/* Render streamed components */}
     </div>
   );
 }
 ```
 
-### 3. 关键技术点
+### 3. Key Technologies
 
-#### a) `createStreamableValue` - 流式值
+#### a) `createStreamableValue` - Streamable Values
 
-用于流式传输文本内容：
+Used to stream text content:
 
 ```typescript
 const contentStream = createStreamableValue('');
-contentStream.update(content); // 更新值
-contentStream.done(); // 完成流
+contentStream.update(content); // Update value
+contentStream.done(); // Complete stream
 ```
 
-客户端使用 `useStreamableValue` hook 订阅更新：
+Client uses `useStreamableValue` hook to subscribe to updates:
 
 ```typescript
 const [text] = useStreamableValue(content);
 ```
 
-#### b) `streamUI` - 流式 UI 生成
+#### b) `streamUI` - Streaming UI Generation
 
-这是 Vercel AI SDK 的核心函数，允许：
+This is the core function of Vercel AI SDK, allowing:
 
-- 流式传输文本内容
-- 流式传输 React Server Components
-- 通过工具调用动态生成 UI
+- Streaming text content
+- Streaming React Server Components
+- Dynamic UI generation through tool calls
 
-#### c) `getMutableAIState` - 状态管理
+#### c) `getMutableAIState` - State Management
 
-用于在 Server Action 中访问和更新 AI 状态：
+Used to access and update AI state in Server Actions:
 
 ```typescript
 const messages = getMutableAIState<typeof AI>('messages');
-messages.get(); // 获取当前状态
-messages.update(); // 更新状态
-messages.done(); // 完成状态更新
+messages.get(); // Get current state
+messages.update(); // Update state
+messages.done(); // Complete state update
 ```
 
-#### d) Tools 系统
+#### d) Tools System
 
-每个工具：
+Each tool:
 
-1. 定义 `description` - LLM 理解工具用途
-2. 定义 `parameters` - 使用 Zod schema 验证参数
-3. 实现 `generate` - 生成器函数返回 RSC
+1. Defines `description` - LLM understands tool purpose
+2. Defines `parameters` - Uses Zod schema for parameter validation
+3. Implements `generate` - Generator function returns RSC
 
-LLM 会根据用户输入自动决定调用哪个工具。
+The LLM automatically decides which tool to call based on user input.
 
-### 4. 数据流
+### 4. Data Flow
 
 ```
-用户输入
+User Input
   ↓
-客户端调用 sendMessage(input)
+Client calls sendMessage(input)
   ↓
-Server Action 执行
+Server Action executes
   ↓
-streamUI 开始与 LLM 交互
+streamUI starts interacting with LLM
   ↓
-LLM 生成文本 → 通过 text 函数流式传输
+LLM generates text → Streamed through text function
   ↓
-LLM 决定调用工具 → 工具返回 RSC
+LLM decides to call tool → Tool returns RSC
   ↓
-RSC 流式传输回客户端
+RSC streamed to client
   ↓
-客户端实时渲染组件
+Client renders component in real-time
 ```
 
-### 5. 组件类型
+### 5. Component Types
 
-项目中有两种类型的组件：
+The project has two types of components:
 
-**a) Server Components** (默认)
+**a) Server Components** (default)
 
-- `CameraView`, `HubView`, `UsageView` 等
-- 在服务器端渲染
-- 可以直接访问服务器资源
+- `CameraView`, `HubView`, `UsageView`, etc.
+- Rendered on the server
+- Can directly access server resources
 
 **b) Client Components** (`"use client"`)
 
-- `page.tsx`, `message.tsx` 等
-- 需要交互的组件
-- 使用 hooks 和事件处理
+- `page.tsx`, `message.tsx`, etc.
+- Components that need interactivity
+- Use hooks and event handlers
 
-### 6. 优势
+### 6. Advantages
 
-1. **实时性** - 组件流式传输，无需等待完整响应
-2. **类型安全** - TypeScript + Zod 参数验证
-3. **动态 UI** - LLM 根据上下文动态生成 UI
-4. **服务器端渲染** - 减少客户端负担
-5. **状态管理** - 自动管理对话历史
+1. **Real-time** - Components streamed without waiting for complete response
+2. **Type Safety** - TypeScript + Zod parameter validation
+3. **Dynamic UI** - LLM dynamically generates UI based on context
+4. **Server-side Rendering** - Reduces client burden
+5. **State Management** - Automatically manages conversation history
 
-### 7. 工作流程示例
+### 7. Workflow Example
 
-用户输入："Show me my smart home hub"
+User input: "Show me my smart home hub"
 
-1. `sendMessage` 被调用
-2. `streamUI` 开始与 LLM 交互
-3. LLM 识别需要调用 `viewHub` 工具
-4. `viewHub.generate` 执行：
-   - 更新消息历史
-   - 返回 `<Message content={<HubView hub={hub} />} />`
-5. 组件流式传输到客户端
-6. 客户端渲染 `HubView` 组件
+1. `sendMessage` is called
+2. `streamUI` starts interacting with LLM
+3. LLM identifies need to call `viewHub` tool
+4. `viewHub.generate` executes:
+   - Updates message history
+   - Returns `<Message content={<HubView hub={hub} />} />`
+5. Component streamed to client
+6. Client renders `HubView` component
 
-## 总结
+## Summary
 
-这个项目展示了如何将 AI 与 React Server Components 结合，实现：
+This project demonstrates how to combine AI with React Server Components to achieve:
 
-- **流式传输** - 实时更新 UI
-- **动态生成** - LLM 决定渲染什么组件
-- **类型安全** - 完整的 TypeScript 支持
-- **服务器优先** - 利用 RSC 的优势
+- **Streaming** - Real-time UI updates
+- **Dynamic Generation** - LLM decides what components to render
+- **Type Safety** - Full TypeScript support
+- **Server-first** - Leverages RSC advantages
 
-这是 Vercel AI SDK RSC 功能的典型应用场景，特别适合需要根据 AI 响应动态生成复杂 UI 的应用。
+This is a typical use case of Vercel AI SDK RSC functionality, especially suitable for applications that need to dynamically generate complex UIs based on AI responses.
 
-## 了解更多
+## Learn More
 
-了解更多关于 Vercel AI SDK 或 Next.js 的资源：
+To learn more about Vercel AI SDK or Next.js take a look at the following resources:
 
-- [Vercel AI SDK 文档](https://sdk.vercel.ai/docs)
+- [Vercel AI SDK docs](https://sdk.vercel.ai/docs)
 - [Vercel AI Playground](https://play.vercel.ai)
-- [Next.js 文档](https://nextjs.org/docs) - 了解 Next.js 功能和 API
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API
 
 ---
 
-[English Version](./README.en.md)
+[中文版本](./README.zh.md)
