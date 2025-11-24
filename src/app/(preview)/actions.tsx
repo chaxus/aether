@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { CameraView } from '@/components/camera-view';
 import { HubView } from '@/components/hub-view';
 import { UsageView } from '@/components/usage-view';
+import { Loading } from '@/components/loading';
 
 export interface Hub {
   climate: Record<'low' | 'high', number>;
@@ -69,6 +70,7 @@ const sendMessage = async (message: string) => {
       `,
       messages: messages.get() as ModelMessage[],
       text: async function* ({ content, delta: _delta, done }) {
+        yield <div>loading</div>;
         if (done) {
           // Only update messages if we have actual content
           if (content && content.trim()) {
@@ -86,6 +88,7 @@ const sendMessage = async (message: string) => {
           description: 'view current active cameras',
           inputSchema: z.object({}),
           generate: async function* (_input, { toolName: _toolName, toolCallId: _toolCallId }) {
+            yield <Loading />;
             return <Message role="assistant" content={<CameraView />} />;
           },
         },
@@ -94,6 +97,7 @@ const sendMessage = async (message: string) => {
             'view the hub that contains current quick summary and actions for temperature, lights, and locks',
           inputSchema: z.object({}),
           generate: async function* (_input, { toolName: _toolName, toolCallId: _toolCallId }) {
+            yield <Loading />;
             return <Message role="assistant" content={<HubView hub={hub} />} />;
           },
         },
@@ -110,6 +114,7 @@ const sendMessage = async (message: string) => {
             }),
           }),
           generate: async function* ({ hub: newHub }, { toolName: _toolName, toolCallId: _toolCallId }) {
+            yield <Loading />;
             hub = newHub;
             return <Message role="assistant" content={<HubView hub={hub} />} />;
           },
@@ -120,6 +125,7 @@ const sendMessage = async (message: string) => {
             type: z.enum(['electricity', 'water', 'gas']),
           }),
           generate: async function* ({ type }, { toolName: _toolName, toolCallId: _toolCallId }) {
+            yield <Loading />;
             return <Message role="assistant" content={<UsageView type={type} />} />;
           },
         },

@@ -1,7 +1,5 @@
 {
   "paths": ["src/app", "src/components"],
   "ignore": [".next", "node_modules", "dist", "build"],
-  "rules": {
-    "eslint/require-yield": "off"
-  }
+  "rules": {}
 }
