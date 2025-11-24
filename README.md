@@ -1,5 +1,7 @@
 # Aether
 
+> **Language**: [English](./README.md) | [中文](./README.zh.md)
+
 > **Note**: Development of AI SDK RSC is currently paused. For more information, see [Migrating from AI SDK RSC](https://sdk.vercel.ai/docs/ai-sdk-rsc/migrating-to-ui#background).
 
 **Aether** is a React Server Components (RSC) project built with **Next.js** and **Vercel AI SDK**, demonstrating how to stream AI-generated React components to the client in real-time. Like the ethereal medium that connects the heavens, Aether seamlessly bridges AI intelligence with dynamic user interfaces.
@@ -10,36 +12,14 @@ Aether demonstrates how to use the [Vercel AI SDK](https://sdk.vercel.ai/docs) w
 
 ## Tech Stack
 
-- **Next.js 14.2.5** - Using App Router
-- **Vercel AI SDK 3.3.20** - RSC support
-- **React 18** - Server Components support
-- **OpenAI SDK** - LLM interaction
+- **Next.js 16.0.3** - Using App Router
+- **Vercel AI SDK 5.0.101** - RSC support
+- **React 19** - Server Components support
+- **@ai-sdk/openai 2.0.71** - LLM interaction
 - **TypeScript** - Type safety
-- **Zod** - Parameter validation
+- **Zod 4.1.13** - Parameter validation
 
 ## Quick Start
-
-### Deploy
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fai-sdk-preview-rsc-genui&env=OPENAI_API_KEY&envDescription=API%20keys%20needed%20for%20application&envLink=platform.openai.com)
-
-### Run Locally
-
-Run [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) with [npm](https://docs.npmjs.com/cli/init), [Yarn](https://yarnpkg.com/lang/en/docs/cli/create/), or [pnpm](https://pnpm.io) to bootstrap the example:
-
-```bash
-npx create-next-app --example https://github.com/vercel-labs/ai-sdk-preview-rsc-genui ai-sdk-preview-rsc-genui-example
-```
-
-```bash
-yarn create next-app --example https://github.com/vercel-labs/ai-sdk-preview-rsc-genui ai-sdk-preview-rsc-genui-example
-```
-
-```bash
-pnpm create next-app --example https://github.com/vercel-labs/ai-sdk-preview-rsc-genui ai-sdk-preview-rsc-genui-example
-```
-
-To run the example locally you need to:
 
 1. Sign up for accounts with the AI providers you want to use (e.g., OpenAI, Anthropic).
 2. Obtain API keys for each provider.
@@ -77,11 +57,17 @@ This is the core of the entire project, implementing the RSC streaming mechanism
 
 ```typescript
 export const AI = createAI<AIState, UIState>({
-  initialAIState: { chatId, messages: [] },
+  initialAIState: {
+    chatId: generateId(),
+    messages: [],
+  },
   initialUIState: [],
   actions: { sendMessage },
-  onSetAIState: async ({ state, done }) => {
-    /* persist state */
+  onSetAIState: async ({ key, state, done }) => {
+    'use server';
+    if (done) {
+      // save to database
+    }
   },
 });
 ```
@@ -90,22 +76,41 @@ export const AI = createAI<AIState, UIState>({
 
 ```typescript
 const sendMessage = async (message: string) => {
-  "use server";  // Next.js Server Action marker
+  'use server';  // Next.js Server Action marker
 
-  const messages = getMutableAIState<typeof AI>("messages");
-  messages.update([...cleanMessages, { role: "user", content: message }]);
+  const messages = getMutableAIState<typeof AI>('messages');
+
+  // Clean up any empty assistant messages
+  const currentMessages = messages.get() as ModelMessage[];
+  const cleanMessages = currentMessages.filter(
+    (msg) => !(msg.role === 'assistant' && (!msg.content ||
+      (typeof msg.content === 'string' && msg.content.trim() === '')))
+  );
+
+  messages.update([...cleanMessages, { role: 'user', content: message }]);
 
   // Create streamable text value
-  const contentStream = createStreamableValue("");
+  const contentStream = createStreamableValue('');
   const textComponent = <TextStreamMessage content={contentStream.value} />;
+
+  // Create custom OpenAI client
+  const customOpenAI = createOpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.OPENAI_BASE_URL + '/v1',
+  });
 
   // Use streamUI to stream UI
   const { value: stream } = await streamUI({
-    model: customOpenAI("gpt-4o"),
-    messages: messages.get(),
-    text: async function* ({ content, done }) {
+    model: customOpenAI('gpt-4o'),
+    system: 'you are a friendly home automation assistant',
+    messages: messages.get() as ModelMessage[],
+    text: async function* ({ content, delta, done }) {
       // Stream text content
       if (done) {
+        if (content && content.trim()) {
+          messages.done([...(messages.get() as ModelMessage[]),
+            { role: 'assistant', content }]);
+        }
         contentStream.done();
       } else {
         contentStream.update(content);
@@ -126,14 +131,18 @@ Each tool is a generator function that returns a React Server Component:
 ```typescript
 tools: {
   viewCameras: {
-    description: "view current active cameras",
-    parameters: z.object({}),
-    generate: async function* ({}) {
-      // Update message history
-      messages.done([...messages, toolCall, toolResult]);
-
+    description: 'view current active cameras',
+    inputSchema: z.object({}),
+    generate: async function* (_input, { toolName, toolCallId }) {
       // Return React Server Component
       return <Message role="assistant" content={<CameraView />} />;
+    },
+  },
+  viewHub: {
+    description: 'view the hub that contains current quick summary and actions',
+    inputSchema: z.object({}),
+    generate: async function* (_input, { toolName, toolCallId }) {
+      return <Message role="assistant" content={<HubView hub={hub} />} />;
     },
   },
   // ... other tools
@@ -143,10 +152,14 @@ tools: {
 #### `app/(preview)/layout.tsx` - AI Context Provider
 
 ```typescript
-export default function RootLayout({ children }) {
+import { Toaster } from 'sonner';
+import { AI } from './actions';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html>
+    <html lang="en">
       <body>
+        <Toaster position="top-center" richColors />
         <AI>{children}</AI>  {/* Provide AI context */}
       </body>
     </html>
@@ -157,20 +170,43 @@ export default function RootLayout({ children }) {
 #### `app/(preview)/page.tsx` - Client Component
 
 ```typescript
-"use client";
+'use client';
+
+import { useActions } from '@ai-sdk/rsc';
+import { Message } from '@/components/message';
 
 export default function Home() {
   const { sendMessage } = useActions();  // Get actions from AI context
 
+  const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<Array<ReactNode>>([]);
 
   // Call Server Action
-  const response: ReactNode = await sendMessage(input);
-  setMessages((messages) => [...messages, response]);
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    setMessages((messages) => [
+      ...messages,
+      <Message key={messages.length} role="user" content={input} />
+    ]);
+    setInput('');
+
+    const response: ReactNode = await sendMessage(input);
+    setMessages((messages) => [...messages, response]);
+  };
 
   return (
     <div>
-      {messages.map((message) => message)}  {/* Render streamed components */}
+      {messages.map((message, index) => (
+        <React.Fragment key={index}>{message}</React.Fragment>
+      ))}
+      <form onSubmit={handleSubmit}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Send a message..."
+        />
+      </form>
     </div>
   );
 }
@@ -218,8 +254,19 @@ messages.done(); // Complete state update
 Each tool:
 
 1. Defines `description` - LLM understands tool purpose
-2. Defines `parameters` - Uses Zod schema for parameter validation
-3. Implements `generate` - Generator function returns RSC
+2. Defines `inputSchema` - Uses Zod schema for parameter validation
+3. Implements `generate` - Generator function that receives input and tool metadata, returns RSC
+
+The `generate` function signature:
+
+```typescript
+generate: async function* (input, { toolName, toolCallId }) => {
+  // input: validated parameters based on inputSchema
+  // toolName: name of the tool being called
+  // toolCallId: unique ID for this tool call
+  return <ReactServerComponent />;
+}
+```
 
 The LLM automatically decides which tool to call based on user input.
 
@@ -298,7 +345,3 @@ To learn more about Vercel AI SDK or Next.js take a look at the following resour
 - [Vercel AI SDK docs](https://sdk.vercel.ai/docs)
 - [Vercel AI Playground](https://play.vercel.ai)
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API
-
----
-
-[中文版本](./README.zh.md)
