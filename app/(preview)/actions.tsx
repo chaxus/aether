@@ -1,7 +1,7 @@
 import { Message, TextStreamMessage } from '@/components/message';
 import { createOpenAI } from '@ai-sdk/openai';
 import { CoreMessage, generateId } from 'ai';
-import { createAI, createStreamableValue, getMutableAIState, streamUI } from 'ai/rsc';
+import { createAI, createStreamableValue, getMutableAIState, streamUI } from '@ai-sdk/rsc';
 import { ReactNode } from 'react';
 import { z } from 'zod';
 import { CameraView } from '@/components/camera-view';
@@ -30,6 +30,7 @@ let hub: Hub = {
 const sendMessage = async (message: string) => {
   'use server';
 
+  // const aiState = getMutableAIState<typeof AI>();
   const messages = getMutableAIState<typeof AI>('messages');
 
   // Clean up any empty assistant messages before adding new user message
@@ -67,7 +68,7 @@ const sendMessage = async (message: string) => {
         - reply in lower case
       `,
       messages: messages.get() as CoreMessage[],
-      text: async function* ({ content, done }) {
+      text: async function* ({ content, delta, done }) {
         if (done) {
           // Only update messages if we have actual content
           if (content && content.trim()) {
@@ -83,78 +84,22 @@ const sendMessage = async (message: string) => {
       tools: {
         viewCameras: {
           description: 'view current active cameras',
-          parameters: z.object({}),
-          generate: async function* ({}) {
-            const toolCallId = generateId();
-
-            messages.done([
-              ...(messages.get() as CoreMessage[]),
-              {
-                role: 'assistant',
-                content: [
-                  {
-                    type: 'tool-call',
-                    toolCallId,
-                    toolName: 'viewCameras',
-                    args: {},
-                  },
-                ],
-              },
-              {
-                role: 'tool',
-                content: [
-                  {
-                    type: 'tool-result',
-                    toolName: 'viewCameras',
-                    toolCallId,
-                    result: `The active cameras are currently displayed on the screen`,
-                  },
-                ],
-              },
-            ]);
-
+          inputSchema: z.object({}),
+          generate: async function* (input, { toolName, toolCallId }) {
             return <Message role="assistant" content={<CameraView />} />;
           },
         },
         viewHub: {
           description:
             'view the hub that contains current quick summary and actions for temperature, lights, and locks',
-          parameters: z.object({}),
-          generate: async function* ({}) {
-            const toolCallId = generateId();
-
-            messages.done([
-              ...(messages.get() as CoreMessage[]),
-              {
-                role: 'assistant',
-                content: [
-                  {
-                    type: 'tool-call',
-                    toolCallId,
-                    toolName: 'viewHub',
-                    args: {},
-                  },
-                ],
-              },
-              {
-                role: 'tool',
-                content: [
-                  {
-                    type: 'tool-result',
-                    toolName: 'viewHub',
-                    toolCallId,
-                    result: hub,
-                  },
-                ],
-              },
-            ]);
-
+          inputSchema: z.object({}),
+          generate: async function* (input, { toolName, toolCallId }) {
             return <Message role="assistant" content={<HubView hub={hub} />} />;
           },
         },
         updateHub: {
           description: 'update the hub with new values',
-          parameters: z.object({
+          inputSchema: z.object({
             hub: z.object({
               climate: z.object({
                 low: z.number(),
@@ -164,73 +109,17 @@ const sendMessage = async (message: string) => {
               locks: z.array(z.object({ name: z.string(), isLocked: z.boolean() })),
             }),
           }),
-          generate: async function* ({ hub: newHub }) {
+          generate: async function* ({ hub: newHub }, { toolName, toolCallId }) {
             hub = newHub;
-            const toolCallId = generateId();
-
-            messages.done([
-              ...(messages.get() as CoreMessage[]),
-              {
-                role: 'assistant',
-                content: [
-                  {
-                    type: 'tool-call',
-                    toolCallId,
-                    toolName: 'updateHub',
-                    args: { hub },
-                  },
-                ],
-              },
-              {
-                role: 'tool',
-                content: [
-                  {
-                    type: 'tool-result',
-                    toolName: 'updateHub',
-                    toolCallId,
-                    result: `The hub has been updated with the new values`,
-                  },
-                ],
-              },
-            ]);
-
             return <Message role="assistant" content={<HubView hub={hub} />} />;
           },
         },
         viewUsage: {
           description: 'view current usage for electricity, water, or gas',
-          parameters: z.object({
+          inputSchema: z.object({
             type: z.enum(['electricity', 'water', 'gas']),
           }),
-          generate: async function* ({ type }) {
-            const toolCallId = generateId();
-
-            messages.done([
-              ...(messages.get() as CoreMessage[]),
-              {
-                role: 'assistant',
-                content: [
-                  {
-                    type: 'tool-call',
-                    toolCallId,
-                    toolName: 'viewUsage',
-                    args: { type },
-                  },
-                ],
-              },
-              {
-                role: 'tool',
-                content: [
-                  {
-                    type: 'tool-result',
-                    toolName: 'viewUsage',
-                    toolCallId,
-                    result: `The current usage for ${type} is currently displayed on the screen`,
-                  },
-                ],
-              },
-            ]);
-
+          generate: async function* ({ type }, { toolName, toolCallId }) {
             return <Message role="assistant" content={<UsageView type={type} />} />;
           },
         },
@@ -279,7 +168,7 @@ export const AI = createAI<AIState, UIState>({
   actions: {
     sendMessage,
   },
-  onSetAIState: async ({ state, done }) => {
+  onSetAIState: async ({ key, state, done }) => {
     'use server';
 
     if (done) {

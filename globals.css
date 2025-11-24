@@ -1,6 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@source './app/**/*.{js,ts,jsx,tsx,mdx}';
+@source './components/**/*.{js,ts,jsx,tsx,mdx}';
 
 :root {
   --foreground-rgb: 0, 0, 0;
@@ -10,7 +11,7 @@
 
 @font-face {
   font-family: 'uncut sans';
-  src: url('./uncut-sans.woff2') format('woff2');
+  src: url('./app/(preview)/uncut-sans.woff2') format('woff2');
 }
 
 * {

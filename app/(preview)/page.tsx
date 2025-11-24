@@ -1,12 +1,13 @@
 'use client';
 
-import { ReactNode, useRef, useState } from 'react';
-import { useActions } from 'ai/rsc';
+import React, { ReactNode, useRef, useState } from 'react';
+import { useActions } from '@ai-sdk/rsc';
 import { Message } from '@/components/message';
 import { useScrollToBottom } from '@/components/use-scroll-to-bottom';
 import { motion } from 'framer-motion';
 import { MasonryIcon, VercelIcon } from '@/components/icons';
 import Link from 'next/link';
+import '../../globals.css';
 
 export default function Home() {
   const { sendMessage } = useActions();
@@ -63,7 +64,9 @@ export default function Home() {
               </div>
             </motion.div>
           )}
-          {messages.map((message) => message)}
+          {messages.map((message, index) => (
+            <React.Fragment key={index}>{message}</React.Fragment>
+          ))}
           <div ref={messagesEndRef} />
         </div>
 

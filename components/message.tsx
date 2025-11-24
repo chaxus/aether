@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { BotIcon, UserIcon } from './icons';
 import { ReactNode } from 'react';
-import { StreamableValue, useStreamableValue } from 'ai/rsc';
+import { StreamableValue, useStreamableValue } from '@ai-sdk/rsc';
 import { Markdown } from './markdown';
 
 export const TextStreamMessage = ({ content }: { content: StreamableValue }) => {
