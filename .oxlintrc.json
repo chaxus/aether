@@ -1,14 +1,5 @@
 {
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/crates/oxc_linter/src/schemas/oxlint.schema.json",
-  "paths": [
-    "app",
-    "components"
-  ],
-  "ignore": [
-    ".next",
-    "node_modules",
-    "dist",
-    "build"
-  ]
+  "paths": ["app", "components"],
+  "ignore": [".next", "node_modules", "dist", "build"]
 }
-
